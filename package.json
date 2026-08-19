@@ -4,7 +4,9 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test --test-concurrency=1",
+    "personas:generate": "node scripts/generate-persona-templates.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

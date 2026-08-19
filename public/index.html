@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Singapore AI Chat</title>
+  <title>Chat</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="app-page">
@@ -38,19 +38,198 @@
             <h2 id="convTitle"></h2>
             <p class="conv-subtitle">Chatting with <strong id="convPersonaName"></strong><span id="convPersonaDesc"></span></p>
           </div>
-          <button onclick="exportChatToPDF()">Export PDF</button>
+          <div class="conv-header-actions">
+            <button id="endInteractionBtn" class="secondary-btn" onclick="endInteraction()" disabled>End Interaction</button>
+            <button class="secondary-btn" onclick="openPersonaDetails()">Details</button>
+            <button onclick="exportChatToPDF()">Export PDF</button>
+          </div>
         </header>
+
+        <div id="personaStateSummary" class="persona-state-summary" aria-live="polite">
+          <span class="state-summary-label">Persona state</span>
+          <span>Mood: <strong id="summaryMood">—</strong></span>
+          <span>Relationship: <strong id="summaryRelationship">—</strong></span>
+          <span>Interactions: <strong id="summaryInteractions">—</strong></span>
+        </div>
+
+        <div id="evolutionNotice" class="evolution-notice hidden" role="status"></div>
 
         <div id="chat"></div>
 
         <div class="input-area">
           <input id="input" placeholder="Type your message..." />
-          <button onclick="sendMessage()">Send</button>
+          <button id="sendBtn" onclick="sendMessage()">Send</button>
         </div>
       </div>
     </main>
 
   </div>
+
+  <div id="personaDrawerBackdrop" class="persona-drawer-backdrop hidden" onclick="closePersonaDetails()"></div>
+  <aside id="personaDrawer" class="persona-drawer hidden" aria-hidden="true" aria-label="Persona details">
+    <header class="persona-drawer-header">
+      <div>
+        <div class="drawer-eyebrow">Persona details</div>
+        <h2 id="drawerPersonaName">Persona</h2>
+      </div>
+      <button class="icon-btn" onclick="closePersonaDetails()" aria-label="Close Persona details">×</button>
+    </header>
+
+    <nav class="persona-tabs" aria-label="Persona detail sections">
+      <button class="persona-tab active" data-tab="state" onclick="showPersonaTab('state')">State</button>
+      <button class="persona-tab" data-tab="context" onclick="showPersonaTab('context')">Context</button>
+      <button class="persona-tab" data-tab="memory" onclick="showPersonaTab('memory')">Memory</button>
+      <button class="persona-tab" data-tab="history" onclick="showPersonaTab('history')">History</button>
+      <button class="persona-tab" data-tab="settings" onclick="showPersonaTab('settings')">Settings</button>
+    </nav>
+
+    <div class="persona-drawer-body">
+      <section class="persona-tab-panel" data-panel="state">
+        <div class="detail-section">
+          <h3>Relationship</h3>
+          <dl class="detail-list">
+            <div><dt>Stage</dt><dd id="detailRelationshipStage">—</dd></div>
+            <div><dt>Interactions</dt><dd id="detailInteractionCount">—</dd></div>
+            <div><dt>First interaction</dt><dd id="detailFirstInteraction">—</dd></div>
+            <div><dt>Last interaction</dt><dd id="detailLastInteraction">—</dd></div>
+          </dl>
+        </div>
+
+        <div class="detail-section">
+          <h3>Mood</h3>
+          <dl class="detail-list">
+            <div><dt>Current</dt><dd id="detailMoodCurrent">—</dd></div>
+            <div><dt>Intensity</dt><dd id="detailMoodIntensity">—</dd></div>
+            <div><dt>Baseline</dt><dd id="detailMoodBaseline">—</dd></div>
+          </dl>
+        </div>
+
+        <div class="detail-section">
+          <h3>Speaking style drift</h3>
+          <dl class="detail-list">
+            <div><dt>Formality</dt><dd id="detailFormality">—</dd></div>
+            <div><dt>Emoji frequency</dt><dd id="detailEmojiFrequency">—</dd></div>
+            <div><dt>Verbosity</dt><dd id="detailVerbosity">—</dd></div>
+          </dl>
+        </div>
+
+        <div class="detail-section">
+          <h3>Evolved traits</h3>
+          <div id="detailTraits" class="detail-chips"></div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Interests</h3>
+          <div id="detailInterests" class="detail-chips"></div>
+        </div>
+
+        <details class="raw-state">
+          <summary>Raw state JSON</summary>
+          <pre id="detailRawState"></pre>
+        </details>
+      </section>
+
+      <section class="persona-tab-panel hidden" data-panel="context">
+        <p class="detail-note">The next response uses the latest Persona state, recalled Memory, and messages from the current interaction. Earlier interactions remain visible in the chat but are represented by Memory rather than replayed in full.</p>
+
+        <div class="detail-section">
+          <h3>Conversation</h3>
+          <dl class="detail-list">
+            <div><dt>All user/assistant messages</dt><dd id="contextMessageCount">—</dd></div>
+            <div><dt>Current interaction messages</dt><dd id="contextCurrentMessageCount">—</dd></div>
+            <div><dt>Completed interactions here</dt><dd id="contextCompletedInteractions">—</dd></div>
+            <div><dt>Created</dt><dd id="contextCreatedAt">—</dd></div>
+            <div><dt>Last activity</dt><dd id="contextUpdatedAt">—</dd></div>
+          </dl>
+        </div>
+
+        <div class="detail-section">
+          <h3>Actual conversation context</h3>
+          <div id="contextMessages" class="context-messages"></div>
+        </div>
+
+        <details class="context-block">
+          <summary>Raw messages JSON</summary>
+          <pre id="contextRawMessages"></pre>
+        </details>
+
+        <details class="context-block">
+          <summary>Stored system snapshot from conversation creation</summary>
+          <pre id="detailStoredPrompt"></pre>
+        </details>
+      </section>
+
+      <section class="persona-tab-panel hidden" data-panel="memory">
+        <p class="detail-note">Memory is stored separately for this user and Persona. Conversation summaries provide continuity, while atomic memories capture durable facts, preferences, topics, and milestones.</p>
+
+        <div class="detail-section">
+          <h3>Memory overview</h3>
+          <dl class="detail-list">
+            <div><dt>Conversation summaries</dt><dd id="memorySummaryCount">—</dd></div>
+            <div><dt>Durable memories</dt><dd id="memoryDurableCount">—</dd></div>
+            <div><dt>Total stored entries</dt><dd id="memoryTotal">—</dd></div>
+          </dl>
+          <div id="memoryTopTags" class="detail-chips"></div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Recent memories</h3>
+          <div id="memoryList" class="memory-list"></div>
+        </div>
+
+        <details class="context-block">
+          <summary>Raw Memory JSON</summary>
+          <pre id="memoryRaw"></pre>
+        </details>
+      </section>
+
+      <section class="persona-tab-panel hidden" data-panel="history">
+        <div id="personaRestorePanel" class="history-restore-panel">
+          <h3>Restore Persona</h3>
+          <p>State and Memory are restored together. Chat history and relationship settings stay unchanged.</p>
+          <button
+            id="resetPersonaBtn"
+            class="history-restore-reset"
+            type="button"
+            onclick="restorePersona(null, null)"
+          >Reset to initial</button>
+          <p
+            id="personaRestoreStatus"
+            class="history-restore-status"
+            role="status"
+            aria-live="polite"
+            tabindex="-1"
+          ></p>
+        </div>
+        <div id="detailHistory" class="persona-history"></div>
+      </section>
+
+      <section class="persona-tab-panel hidden" data-panel="settings">
+        <p class="detail-note">These are minimum total completed interactions before each relationship transition is allowed. A value of 0 adds no numerical gate; OpenPersona's qualitative evidence is still required.</p>
+
+        <form id="relationshipSettingsForm" class="settings-form" onsubmit="savePersonaSettings(event)">
+          <label>
+            <span>Stranger → acquaintance</span>
+            <input id="settingStranger" type="number" min="0" max="10000" step="1" required>
+          </label>
+          <label>
+            <span>Acquaintance → friend</span>
+            <input id="settingAcquaintance" type="number" min="0" max="10000" step="1" required>
+          </label>
+          <label>
+            <span>Friend → close friend</span>
+            <input id="settingFriend" type="number" min="0" max="10000" step="1" required>
+          </label>
+          <label>
+            <span>Close friend → intimate</span>
+            <input id="settingCloseFriend" type="number" min="0" max="10000" step="1" required>
+          </label>
+          <button id="savePersonaSettingsBtn" type="submit">Save settings</button>
+          <p id="personaSettingsStatus" class="settings-status" role="status"></p>
+        </form>
+      </section>
+    </div>
+  </aside>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 

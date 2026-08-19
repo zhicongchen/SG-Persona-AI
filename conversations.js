@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from './db.js';
 import { requireAuth } from './auth.js';
 import personas from './personas.js';
+import { ensurePersonaInstance } from './persona-instances.js';
 
 // =========================
 // Conversation storage
@@ -24,6 +25,8 @@ function latestConversation(userId, personaId) {
 // New conversations start with the persona's system prompt, stored as a
 // message so old chats keep their original prompt even if persona.json changes
 export function createConversation(userId, personaId) {
+  const personaInstance = ensurePersonaInstance(userId, personaId);
+
   const info = db.prepare(
     'INSERT INTO conversations (user_id, persona_id) VALUES (?, ?)'
   ).run(userId, personaId);
@@ -32,7 +35,7 @@ export function createConversation(userId, personaId) {
 
   db.prepare(
     'INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)'
-  ).run(id, 'system', personas[personaId].prompt);
+  ).run(id, 'system', personaInstance.prompt);
 
   return { id, title: null };
 }
@@ -58,6 +61,23 @@ export function getConversationHistory(conversationId) {
   return db.prepare(
     'SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY id'
   ).all(conversationId);
+}
+
+export function getCurrentInteractionHistory(conversationId) {
+  const lastInteraction = db.prepare(`
+    SELECT through_message_id AS throughMessageId
+    FROM persona_interactions
+    WHERE conversation_id = ?
+    ORDER BY through_message_id DESC
+    LIMIT 1
+  `).get(conversationId);
+
+  return db.prepare(`
+    SELECT role, content
+    FROM messages
+    WHERE conversation_id = ? AND role != 'system' AND id > ?
+    ORDER BY id
+  `).all(conversationId, lastInteraction?.throughMessageId || 0);
 }
 
 // Conversation by id, only if it belongs to this user (else undefined).
@@ -134,16 +154,28 @@ router.get('/:id', (req, res) => {
   }
 
   const messages = db.prepare(`
-    SELECT role, content FROM messages
+    SELECT id, role, content, created_at AS createdAt FROM messages
     WHERE conversation_id = ? AND role != 'system'
     ORDER BY id
+  `).all(conversation.id);
+
+  const interactions = db.prepare(`
+    SELECT
+      interaction_number AS interactionNumber,
+      through_message_id AS throughMessageId,
+      summary,
+      created_at AS createdAt
+    FROM persona_interactions
+    WHERE conversation_id = ?
+    ORDER BY through_message_id
   `).all(conversation.id);
 
   res.json({
     id: conversation.id,
     personaId: conversation.personaId,
     title: conversation.title,
-    messages
+    messages,
+    interactions
   });
 });
 

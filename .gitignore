@@ -1,6 +1,9 @@
 node_modules/*
 .DS_Store
 .DS_Store
+.env
+.env.local
+openpersona/templates/
 
 # SQLite database (local data, never commit)
 data/
