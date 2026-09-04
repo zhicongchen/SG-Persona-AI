@@ -3,6 +3,10 @@ import db from './db.js';
 import { requireAuth } from './auth.js';
 import personas from './personas.js';
 import { ensurePersonaInstance } from './persona-instances.js';
+import {
+  beginPersonaMutation,
+  endPersonaMutation
+} from './persona-activity.js';
 
 // =========================
 // Conversation storage
@@ -177,6 +181,42 @@ router.get('/:id', (req, res) => {
     messages,
     interactions
   });
+});
+
+// DELETE /conversations/:id
+// Remove one conversation and everything recorded against it. Messages,
+// interactions and evolution runs are removed by the foreign-key cascades in
+// db.js; restore events keep their history with a null conversation.
+//
+// This does not roll back the Persona itself. State and Memory the conversation
+// produced live in the user's Persona instance, not in the conversation, so a
+// deleted chat leaves the Persona where it stood. Use the restore controls in
+// the Persona details drawer to wind that back.
+router.delete('/:id', (req, res) => {
+  const conversation = getConversationForUser(Number(req.params.id), req.session.userId);
+  if (!conversation) {
+    return res.status(404).json({ error: 'Conversation not found.' });
+  }
+
+  // Take the same lock as an interaction settlement so a conversation cannot
+  // vanish underneath an in-flight chat, evolution or restore.
+  const activity = beginPersonaMutation(req.session.userId, conversation.personaId);
+  if (!activity.ok) {
+    return res.status(409).json({
+      error: activity.reason === 'chat'
+        ? 'Persona is replying. Wait for the reply to finish.'
+        : 'Persona is being updated. Wait for the update to finish.'
+    });
+  }
+
+  try {
+    db.prepare('DELETE FROM conversations WHERE id = ? AND user_id = ?')
+      .run(conversation.id, req.session.userId);
+  } finally {
+    endPersonaMutation(req.session.userId, conversation.personaId);
+  }
+
+  res.json({ deleted: conversation.id });
 });
 
 export default router;

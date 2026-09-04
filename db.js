@@ -114,6 +114,30 @@ db.exec(`
     CHECK (close_friend_to_intimate >= 0)
   );
 
+  CREATE TABLE IF NOT EXISTS survey_respondents (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    response_id       TEXT NOT NULL UNIQUE,
+    prolific_pid      TEXT,
+    age               TEXT,
+    gender            TEXT,
+    education         TEXT,
+    occupation        TEXT,
+    marital_status    TEXT,
+    income_band       TEXT,
+    housing_type      TEXT,
+    residency_status  TEXT,
+    ethnicity         TEXT,
+    raw_json          TEXT NOT NULL,
+    created_at        TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS survey_personas (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    respondent_id  INTEGER NOT NULL REFERENCES survey_respondents(id) ON DELETE CASCADE,
+    slug           TEXT NOT NULL UNIQUE,
+    created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE INDEX IF NOT EXISTS idx_conversations_user_persona
     ON conversations (user_id, persona_id, updated_at DESC);
 

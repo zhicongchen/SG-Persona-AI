@@ -121,10 +121,73 @@ function renderSidebar() {
     tag.className = 'persona-tag ' + personaTagClass(c.personaId);
     tag.textContent = c.personaName;
 
+    const remove = document.createElement('button');
+    remove.className = 'conv-item-delete';
+    remove.type = 'button';
+    remove.title = 'Delete this conversation';
+    remove.setAttribute('aria-label', `Delete conversation: ${c.title || 'New conversation'}`);
+    remove.textContent = '×';
+    // Without this the click also opens the conversation being deleted.
+    remove.onclick = (event) => {
+      event.stopPropagation();
+      deleteConversation(c.id);
+    };
+
+    item.appendChild(remove);
     item.appendChild(title);
     item.appendChild(tag);
     list.appendChild(item);
   });
+}
+
+// Deleting removes the chat and its interaction history. It does not roll the
+// Persona back: State and Memory earned in the chat live in the Persona
+// instance, and the details drawer is where those are restored.
+async function deleteConversation(id) {
+  const conversation = conversations.find(c => c.id === id);
+  const name = conversation?.title || 'this conversation';
+
+  const confirmed = window.confirm(
+    `Delete "${name}"?
+
+`
+    + 'The messages and its interaction history are removed permanently. '
+    + `The Persona keeps any State and Memory it gained from the chat; use `
+    + 'Details to restore those.'
+  );
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`/conversations/${id}`, { method: 'DELETE' });
+
+    if (res.status === 401) {
+      window.location.replace('/login.html');
+      return;
+    }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      window.alert(data.error || 'Could not delete this conversation.');
+      return;
+    }
+
+    const wasActive = activeConversationId === id;
+    await refreshConversations();
+
+    if (!wasActive) return;
+
+    activeConversationId = null;
+    activePersonaId = null;
+    activePersonaDetails = null;
+
+    if (conversations.length > 0) {
+      openConversation(conversations[0].id);
+    } else {
+      showEmptyState();
+    }
+  } catch (err) {
+    console.error('Error deleting conversation:', err);
+    window.alert('Could not delete this conversation.');
+  }
 }
 
 // =========================

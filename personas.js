@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 
 const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
 const CONFIG_DIR = path.join(PROJECT_ROOT, 'openpersona', 'configs');
+const POLICY_CONFIG_DIR = path.join(CONFIG_DIR, 'policy');
 const TEMPLATE_DIR = path.join(PROJECT_ROOT, 'openpersona', 'templates');
 
 function readJson(file) {
@@ -92,6 +93,7 @@ export function loadPersonaPack(packDir) {
   const injectionFile = path.join(packDir, 'soul', 'injection.md');
   const constitutionFile = path.join(packDir, 'soul', 'constitution.md');
   const memoryReferenceFile = path.join(packDir, 'references', 'memory.md');
+  const policyProfileFile = path.join(packDir, 'soul', 'policy-profile.md');
   const stateFile = path.join(packDir, 'state.json');
 
   if (!fs.existsSync(personaFile) || !fs.existsSync(injectionFile)) {
@@ -102,10 +104,15 @@ export function loadPersonaPack(packDir) {
   const constitution = readMarkdownIfPresent(constitutionFile);
   const injection = readMarkdownIfPresent(injectionFile);
   const memoryReference = readMarkdownIfPresent(memoryReferenceFile);
+  // Survey-grounded Personas carry a structured attitude profile. It is fixed
+  // identity rather than recalled experience, so it belongs in the prompt where
+  // it cannot drift or fail to be retrieved.
+  const policyProfile = readMarkdownIfPresent(policyProfileFile);
   const state = fs.existsSync(stateFile) ? readJson(stateFile) : null;
   const prompt = [
     removeMarkdownSection(constitution, '§8. Evolution Ethics'),
     identityPrompt(persona),
+    policyProfile,
     chatInjection(injection),
     relationshipBehavior(injection),
     memoryRecallProtocol(memoryReference),
@@ -142,10 +149,18 @@ function loadPersona(configFile) {
   return [slug, loadPersonaPack(packDir)];
 }
 
-const configFiles = fs.readdirSync(CONFIG_DIR)
-  .filter(file => file.endsWith('.json'))
-  .sort()
-  .map(file => path.join(CONFIG_DIR, file));
+function listConfigFiles(dir) {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir)
+    .filter(file => file.endsWith('.json'))
+    .sort()
+    .map(file => path.join(dir, file));
+}
+
+const configFiles = [
+  ...listConfigFiles(CONFIG_DIR),
+  ...listConfigFiles(POLICY_CONFIG_DIR)
+];
 
 const personas = Object.fromEntries(configFiles.map(loadPersona));
 

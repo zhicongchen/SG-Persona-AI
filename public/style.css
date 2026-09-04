@@ -132,13 +132,43 @@ input {
 }
 
 .conv-item {
+  position: relative;
   padding: 10px 12px;
+  padding-right: 32px;
   border-radius: 8px;
   cursor: pointer;
 }
 
 .conv-item:hover {
   background: #f0f0f0;
+}
+
+/* Revealed on hover, and on keyboard focus so it stays reachable. */
+.conv-item-delete {
+  position: absolute;
+  top: 8px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #999;
+  font-size: 1.05em;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.conv-item:hover .conv-item-delete,
+.conv-item-delete:focus-visible {
+  opacity: 1;
+}
+
+.conv-item-delete:hover {
+  background: #fdecea;
+  color: #c0392b;
 }
 
 .conv-item.active {

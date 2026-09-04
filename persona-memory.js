@@ -217,7 +217,20 @@ export function buildMemoryPrompt(memories) {
       evidence: memory.evidence
     }));
 
-  if (!interactionContinuity.length && !durableMemories.length) {
+  // Seeded survey material is the Persona's own recollection, not a fact
+  // learned about the user, so it is carried in its own bucket.
+  const ownRecollections = memories
+    .filter(memory => (
+      !isConversationSummary(memory)
+      && memory.subject === 'persona'
+    ))
+    .map(memory => ({
+      type: memory.type,
+      content: memory.content,
+      evidence: memory.evidence
+    }));
+
+  if (!interactionContinuity.length && !durableMemories.length && !ownRecollections.length) {
     return [
       '## Private OpenPersona Memory context',
       'No recalled Memory is available.'
@@ -228,6 +241,7 @@ export function buildMemoryPrompt(memories) {
     '## Private OpenPersona Memory context',
     JSON.stringify({
       interactionContinuity,
+      ownRecollections,
       verifiedUserFacts: durableMemories
     }, null, 2)
   ].join('\n');

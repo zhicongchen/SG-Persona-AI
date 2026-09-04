@@ -40,8 +40,14 @@ This model is required for local inference. The model will be downloaded automat
 
 ```bash
 npm install
+npm run policy:personas
 npm run personas:generate
 ```
+
+`policy:personas` rebuilds the survey-grounded Persona configs from the dataset in
+`data/policy_persona_project/`; `personas:generate` expands every config into an
+OpenPersona pack. If the dataset is not present, skip the first command: the
+committed configs in `openpersona/configs/policy/` are enough to build the packs.
 
 ### 2. Configure Environment
 
@@ -170,11 +176,58 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 
 ## Available Personas
 
-The application includes several AI personas:
+The application serves 61 Personas in two families.
+
+### Hand-authored (3)
 
 - **grab-uncle** - John Tan, a 64-year-old Grab driver in Singapore
 - **singapore-born-lady** - Lim Kwai Lan, a 45-year-old Singaporean who studied in the US
 - **french-dude** - Pierre Marchand, a 32-year-old French person living in Singapore
+
+### Survey-grounded (58)
+
+`policy-p001` through `policy-p058`, each built from one anonymous respondent in a
+Singapore political and social attitudes survey. They are listed by a demographic
+label rather than a name, for example `P001 - 31F Psychologist in rnd`.
+
+The source dataset lives in `data/policy_persona_project/` and has three parts:
+
+| Path | Contents |
+| --- | --- |
+| `data/Pxxx.json` | Structured profile: demographics, political engagement, ideology (economic, social values, patriotism), reasoning style (evidence, context sensitivity, principle, certainty), issue salience and policy positions. Every Likert item is on a 1-7 scale. |
+| `memory/interview_chunks/Pxxx.jsonl` | Five verbatim interview answers per respondent (immigration, welfare, surveillance, environment, minority rights) with a stance hint and confidence. |
+| `memory/dynamic_events/Pxxx.json` | Verbatim personal experiences of policy impact or view change, tagged by affected topic. 65 events across 34 respondents; the other 24 reported none. |
+
+Both the dataset under `data/` and the generated configs in
+`openpersona/configs/policy/` are gitignored, so neither is in the repository.
+**A fresh clone therefore serves only the 3 hand-authored Personas.** To get the
+other 58 back, restore `data/policy_persona_project/` and run the two build
+commands below; because generation is deterministic, that reproduces the same 58
+configs byte for byte.
+
+**How one is built.** `npm run policy:personas` derives the display name, bio,
+personality traits, speaking style and immutable traits from the profile, with no
+model call. `npm run personas:generate` then expands each config into a pack and
+seeds it with two things:
+
+- `soul/policy-profile.md` - the structured attitudes rendered as labelled
+  statements with their raw score, folded into the system prompt by `personas.js`.
+- `memory/memories.jsonl` - the interview answers and lived experiences as
+  Memory records with `subject: "persona"`, retrieved by topic during chat.
+
+### Design decisions
+
+| Decision | Rationale |
+| --- | --- |
+| The 58 survey-grounded Personas replaced 73 earlier LLM-generated `survey-*` ones | They are the same people. Every `Pxxx` profile matches a `survey-*` respondent on verbatim free-text answers and demographics, so keeping both would have listed 58 respondents twice under different pseudonyms. |
+| 15 respondents were dropped | They have no profile in the curated dataset, so they could only have been built the old way. Keeping them would mean two construction methods and non-uniform grounding in one list. |
+| Generation is deterministic, with no LLM in the path | The old pipeline asked a model to invent a pseudonym, bio and personality prose per respondent, which was neither reproducible nor faithful to the data. Every field now traces back to a survey value, re-running produces byte-identical output, and the persona build needs no API key. |
+| Personas are labelled `P001 - 31F Psychologist`, not given pseudonyms | Keeps each Persona traceable to its dataset row and avoids layering a fictional identity over a real respondent's attitudes. |
+| The structured profile goes in the system prompt, not in Memory | Attitudes are stable identity rather than recalled episodes. In the prompt they cannot drift through evolution or fail to be retrieved. Scores are rendered in words with the raw value alongside, and the Persona is told never to recite them or mention the survey. |
+| Interview answers and lived experiences go in Memory | They are topic-specific and should surface only when relevant, which the existing tag-based retrieval in `persona-memory.js` already does. |
+| `buildMemoryPrompt` gained an `ownRecollections` bucket | It previously emitted only conversation summaries and memories with `subject: "user"`, so Persona-owned seeds would have been retrieved and then silently dropped from the prompt. |
+| `scripts/import-survey-csv.js` and the survey tables were kept | The CSV import remains the provenance record linking respondents to Personas. Dropping the tables would be an unrelated migration. |
+| Neither the dataset nor the generated configs are committed | The survey data includes verbatim free-text answers from real respondents, so it stays local. The configs are derived from it and are treated as build output rather than source. The cost is that the Persona set cannot be rebuilt from the repository alone; it needs the dataset. |
 
 ## Project Structure
 
@@ -183,9 +236,20 @@ SG-Persona-AI/
 ├── package.json          # Node.js dependencies and scripts
 ├── persona.json          # Legacy Persona definitions (no longer loaded)
 ├── openpersona/
-│   ├── configs/          # Source configurations for the three Personas
+│   ├── configs/          # Hand-authored Persona configurations
+│   │   └── policy/       # Generated survey-grounded configs (gitignored)
 │   └── templates/        # Generated Persona packs (gitignored)
+├── scripts/
+│   ├── generate-persona-templates.js  # Configs -> OpenPersona packs
+│   ├── generate-policy-personas.js    # Dataset -> policy configs
+│   ├── import-survey-csv.js           # Raw survey CSV -> SQLite
+│   └── lib/
+│       ├── policy-persona.js   # Deterministic derivation from survey values
+│       └── policy-dataset.js   # Dataset reader and pack seeding
+├── data/                # SQLite, session secret, survey dataset (gitignored)
+│   └── policy_persona_project/  # Source profiles, interviews, dynamic events
 ├── server.js            # Express server with chat logic
+├── personas.js          # Loads configs and builds each Persona system prompt
 ├── persona-evolution.js # Interaction settlement and Persona state updates
 ├── persona-memory.js    # Per-user, per-Persona OpenPersona Memory store
 ├── persona-settings.js  # Relationship progression settings

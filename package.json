@@ -6,13 +6,16 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test --test-concurrency=1",
-    "personas:generate": "node scripts/generate-persona-templates.js"
+    "personas:generate": "node scripts/generate-persona-templates.js",
+    "policy:personas": "node scripts/generate-policy-personas.js",
+    "survey:import": "node scripts/import-survey-csv.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.10.0",
     "better-sqlite3-session-store": "^0.1.0",
     "cors": "^2.8.5",
+    "csv-parse": "^7.0.2",
     "dotenv": "^16.4.0",
     "express": "^4.18.2",
     "express-session": "^1.19.0",

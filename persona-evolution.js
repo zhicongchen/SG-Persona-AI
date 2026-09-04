@@ -399,6 +399,7 @@ function normalizeInteractionAssessment(raw, currentState, context) {
     ),
     evolutionAssessment: normalizeEvolutionAssessment(
       raw.evolutionAssessment,
+      currentState,
       context
     )
   };
@@ -435,14 +436,12 @@ function assessmentOutputProblem(raw, currentState, context) {
     }
   }
 
-  if (raw.evolutionAssessment.shouldChange
-      && Object.keys(raw.evolutionAssessment.suggestedChanges).length === 0) {
-    return 'evolutionAssessment.shouldChange is true but suggestedChanges is empty.';
-  }
-  if (!raw.evolutionAssessment.shouldChange
-      && Object.keys(raw.evolutionAssessment.suggestedChanges).length > 0) {
-    return 'evolutionAssessment.shouldChange is false but suggestedChanges is not empty.';
-  }
+  // A shouldChange flag that disagrees with suggestedChanges is not unusable
+  // output: normalizeEvolutionAssessment resolves the pair by requiring both an
+  // affirmative flag and a change that survives sanitizePatch, and clears
+  // suggestedChanges otherwise. Rejecting the mismatch here would instead
+  // discard the summary, Memory and relationship assessment produced by the
+  // same pass, so this validator only enforces what normalization cannot fix.
   const invalidSuggestedKeys = Object.keys(raw.evolutionAssessment.suggestedChanges)
     .filter(key => !['mood', 'evolvedTraits', 'speakingStyleDrift', 'interests'].includes(key));
   if (invalidSuggestedKeys.length) {
@@ -459,16 +458,19 @@ function assessmentOutputProblem(raw, currentState, context) {
     }
   }
   if (raw.evolutionAssessment.shouldChange) {
-    if (!normalizeGroundedEvidence(raw.evolutionAssessment.evidence, context).length) {
-      return 'an evolution change requires at least one grounded evidence citation.';
-    }
+    // Changes that sanitize away are coherent output, not malformed: the model
+    // named a mood, trait or interest the Persona already holds, so nothing is
+    // left to apply. That is a no-op, and normalizeEvolutionAssessment collapses
+    // it to shouldChange:false. Failing the settlement here instead would throw
+    // away the summary and Memory the same pass produced.
     const effectiveChanges = sanitizePatch(
       raw.evolutionAssessment.suggestedChanges,
       currentState,
       context
     );
-    if (!Object.keys(effectiveChanges).length) {
-      return 'evolutionAssessment.shouldChange is true but suggestedChanges contains no effective state change.';
+    if (Object.keys(effectiveChanges).length
+        && !normalizeGroundedEvidence(raw.evolutionAssessment.evidence, context).length) {
+      return 'an evolution change requires at least one grounded evidence citation.';
     }
   }
 
@@ -506,13 +508,17 @@ function normalizeRelationshipAssessment(raw, currentState, context) {
   };
 }
 
-function normalizeEvolutionAssessment(raw, context) {
+function normalizeEvolutionAssessment(raw, currentState, context) {
   const suggestedChanges = isPlainObject(raw?.suggestedChanges)
     ? { ...raw.suggestedChanges }
     : {};
   delete suggestedChanges.relationship;
-  const shouldChange = raw?.shouldChange === true
-    && Object.keys(suggestedChanges).length > 0;
+  // Suggestions the Persona already satisfies patch to nothing. Treat that as
+  // "no change supported" so the second pass and the patch consistency checks
+  // all agree, rather than asking for a change that cannot be applied.
+  const hasEffectiveChange = Object.keys(suggestedChanges).length > 0
+    && Object.keys(sanitizePatch(suggestedChanges, currentState, context)).length > 0;
+  const shouldChange = raw?.shouldChange === true && hasEffectiveChange;
 
   return {
     shouldChange,
@@ -521,7 +527,7 @@ function normalizeEvolutionAssessment(raw, context) {
       : shouldChange
         ? 'Evidence supports a Persona state change.'
         : 'No other Persona state change is supported.',
-    suggestedChanges,
+    suggestedChanges: shouldChange ? suggestedChanges : {},
     evidence: normalizeGroundedEvidence(raw?.evidence, context)
   };
 }
