@@ -1,4 +1,4 @@
-// Writes one OpenPersona config per policy_persona_project respondent.
+// Writes one OpenPersona config per policy survey respondent (data/import/).
 //
 // Deterministic by design: no model call, no randomness, no timestamps. Running
 // this twice produces byte-identical files, so a regenerated config directory

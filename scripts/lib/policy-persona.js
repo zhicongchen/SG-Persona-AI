@@ -1,5 +1,5 @@
-// Deterministic derivation of Persona material from the policy_persona_project
-// survey dataset. No LLM is involved: every field traces back to a survey value,
+// Deterministic derivation of Persona material from the policy survey dataset
+// (data/import/). No LLM is involved: every field traces back to a survey value,
 // and re-running the generators produces byte-identical output.
 //
 // Every Likert item in the dataset is on a 1-7 scale. `patriotism` is a mean of

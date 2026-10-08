@@ -45,9 +45,9 @@ npm run personas:generate
 ```
 
 `policy:personas` rebuilds the survey-grounded Persona configs from the dataset in
-`data/policy_persona_project/`; `personas:generate` expands every config into an
-OpenPersona pack. If the dataset is not present, skip the first command: the
-committed configs in `openpersona/configs/policy/` are enough to build the packs.
+`data/import/`; `personas:generate` expands every config into an OpenPersona pack.
+Both the dataset and the generated configs are gitignored, so without the dataset
+only the 3 hand-authored Personas are built.
 
 ### 2. Configure Environment
 
@@ -130,6 +130,28 @@ user and Persona. Defaults are 1 completed interaction for stranger →
 acquaintance and 10 for acquaintance → friend; OpenPersona's qualitative
 criteria still apply.
 
+## Exporting Chat History
+
+```bash
+npm run chats:export
+npm run chats:export -- --user you@example.com --out ./my-exports
+```
+
+Writes three timestamped files to `data/exports/` (gitignored, since they hold
+full transcripts):
+
+- `chat-history-<time>.json` - every conversation with its messages, each ended
+  interaction's summary, stored Memory, applied patch and the Persona State
+  after it.
+- `chat-history-<time>-messages.csv` - one row per message, tagged with the
+  interaction it belongs to, or `unsettled` if End Interaction has not run yet.
+- `chat-history-<time>-interactions.csv` - one row per ended interaction, with
+  stage, mood, traits, interests and style drift afterwards. Useful for
+  comparing how Personas evolve.
+
+The CSVs are UTF-8 with a byte order mark so Excel opens them correctly; in
+pandas use `encoding="utf-8-sig"`.
+
 ## Changing the Mode
 
 The application supports three modes:
@@ -190,18 +212,18 @@ The application serves 61 Personas in two families.
 Singapore political and social attitudes survey. They are listed by a demographic
 label rather than a name, for example `P001 - 31F Psychologist in rnd`.
 
-The source dataset lives in `data/policy_persona_project/` and has three parts:
+The source dataset lives in `data/import/` and has three parts:
 
 | Path | Contents |
 | --- | --- |
-| `data/Pxxx.json` | Structured profile: demographics, political engagement, ideology (economic, social values, patriotism), reasoning style (evidence, context sensitivity, principle, certainty), issue salience and policy positions. Every Likert item is on a 1-7 scale. |
+| `survey/Pxxx.json` | Structured profile: demographics, political engagement, ideology (economic, social values, patriotism), reasoning style (evidence, context sensitivity, principle, certainty), issue salience and policy positions. Every Likert item is on a 1-7 scale. |
 | `memory/interview_chunks/Pxxx.jsonl` | Five verbatim interview answers per respondent (immigration, welfare, surveillance, environment, minority rights) with a stance hint and confidence. |
 | `memory/dynamic_events/Pxxx.json` | Verbatim personal experiences of policy impact or view change, tagged by affected topic. 65 events across 34 respondents; the other 24 reported none. |
 
 Both the dataset under `data/` and the generated configs in
 `openpersona/configs/policy/` are gitignored, so neither is in the repository.
 **A fresh clone therefore serves only the 3 hand-authored Personas.** To get the
-other 58 back, restore `data/policy_persona_project/` and run the two build
+other 58 back, restore `data/import/` and run the two build
 commands below; because generation is deterministic, that reproduces the same 58
 configs byte for byte.
 
@@ -247,7 +269,7 @@ SG-Persona-AI/
 │       ├── policy-persona.js   # Deterministic derivation from survey values
 │       └── policy-dataset.js   # Dataset reader and pack seeding
 ├── data/                # SQLite, session secret, survey dataset (gitignored)
-│   └── policy_persona_project/  # Source profiles, interviews, dynamic events
+│   └── import/          # Survey CSV, profiles (survey/), interviews and events (memory/)
 ├── server.js            # Express server with chat logic
 ├── personas.js          # Loads configs and builds each Persona system prompt
 ├── persona-evolution.js # Interaction settlement and Persona state updates

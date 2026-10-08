@@ -5,7 +5,7 @@ import { parse } from 'csv-parse/sync';
 import db from '../db.js';
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CSV_PATH = path.join(PROJECT_ROOT, 'data', 'persona_20260812.csv');
+const CSV_PATH = path.join(PROJECT_ROOT, 'data', 'import', 'persona_20260812.csv');
 
 const raw = fs.readFileSync(CSV_PATH, 'utf-8');
 const rows = parse(raw, { columns: false, relax_column_count: true });

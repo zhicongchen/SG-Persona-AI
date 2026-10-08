@@ -1,8 +1,9 @@
-// Reads the policy_persona_project dataset and seeds generated Persona packs
-// with the material derived from it.
+// Reads the policy survey dataset and seeds generated Persona packs with the
+// material derived from it.
 //
-// The dataset lives under data/, which is gitignored, so the generated configs
-// in openpersona/configs/policy/ are the committed record of these Personas.
+// The dataset lives under data/import/, which is gitignored, as are the
+// generated configs in openpersona/configs/policy/. Neither is in the
+// repository, so rebuilding these Personas needs the dataset restored locally.
 
 import fs from 'fs';
 import path from 'path';
@@ -11,8 +12,8 @@ import { profileMarkdown, seedMemories } from './policy-persona.js';
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-export const DATASET_DIR = path.join(PROJECT_ROOT, 'data', 'policy_persona_project');
-export const PROFILE_DIR = path.join(DATASET_DIR, 'data');
+export const DATASET_DIR = path.join(PROJECT_ROOT, 'data', 'import');
+export const PROFILE_DIR = path.join(DATASET_DIR, 'survey');
 export const INTERVIEW_DIR = path.join(DATASET_DIR, 'memory', 'interview_chunks');
 export const EVENTS_DIR = path.join(DATASET_DIR, 'memory', 'dynamic_events');
 export const POLICY_CONFIG_DIR = path.join(PROJECT_ROOT, 'openpersona', 'configs', 'policy');

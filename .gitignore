@@ -11,3 +11,6 @@ data/
 
 # Local dev tooling
 .claude/
+
+# Documentation
+docs/

@@ -8,7 +8,8 @@
     "test": "node --test --test-concurrency=1",
     "personas:generate": "node scripts/generate-persona-templates.js",
     "policy:personas": "node scripts/generate-policy-personas.js",
-    "survey:import": "node scripts/import-survey-csv.js"
+    "survey:import": "node scripts/import-survey-csv.js",
+    "chats:export": "node scripts/export-chat-history.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
