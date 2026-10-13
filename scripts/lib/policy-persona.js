@@ -332,10 +332,10 @@ export function speakingStyle(profile) {
 }
 
 const POLICY_POSITIONS = [
-  ['support_relaxed_immigration', 'relaxing restrictions on low-skilled foreign workers'],
+  ['support_relaxed_immigration', 'relaxing restrictions on the entry of foreign workers'],
   ['support_higher_tax_on_rich', 'higher taxes on high earners to fund welfare'],
-  ['support_stronger_policing', 'stronger policing and public surveillance'],
-  ['support_carbon_tax', 'a carbon tax that raises the cost of living'],
+  ['support_stronger_policing', 'expanding police powers and law enforcement to improve public safety'],
+  ['support_carbon_tax', 'stronger carbon taxes to reduce greenhouse gas emissions'],
   ['support_minority_affirmative_policy', 'stronger policy protections for minority groups']
 ];
 
@@ -458,10 +458,10 @@ const REASONING_GROUPS = [
 ];
 
 const ISSUES = [
-  ['immigration', 'support_relaxed_immigration', 'Immigration', 'relaxing restrictions on low-skilled foreign workers'],
+  ['immigration', 'support_relaxed_immigration', 'Immigration', 'relaxing restrictions on the entry of foreign workers'],
   ['welfare', 'support_higher_tax_on_rich', 'Welfare and tax', 'higher taxes on high earners to fund welfare'],
-  ['law_and_order', 'support_stronger_policing', 'Law and order', 'stronger policing and public surveillance'],
-  ['environment', 'support_carbon_tax', 'Environment', 'a carbon tax that raises the cost of living'],
+  ['law_and_order', 'support_stronger_policing', 'Law and order', 'expanding police powers and law enforcement to improve public safety'],
+  ['environment', 'support_carbon_tax', 'Environment', 'stronger carbon taxes to reduce greenhouse gas emissions'],
   ['minority_rights', 'support_minority_affirmative_policy', 'Minority rights', 'stronger policy protections for minority groups']
 ];
 
